@@ -98,7 +98,10 @@ export default function App(): JSX.Element {
             <TransactionsPage refreshKey={refreshKey} onEdit={openEditModal} onChanged={handleSaved} />
           )}
           {page === 'stats' && <StatsPage refreshKey={refreshKey} />}
-          {page === 'game' && <SnakeGamePage />}
+          {/* 游戏页常驻渲染（隐藏时不卸载），切页不丢进度；不在游戏页或弹窗打开时自动暂停 */}
+          <div style={{ display: page === 'game' ? 'block' : 'none' }}>
+            <SnakeGamePage paused={modalOpen || page !== 'game'} />
+          </div>
           {page === 'settings' && <SettingsPage />}
         </Content>
       </Layout>

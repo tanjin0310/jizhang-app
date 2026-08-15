@@ -174,6 +174,12 @@ body {
 
 /* ===== 贪吃蛇游戏页 ===== */
 
+/* 全局颜色变量：记账规范色（支出红 / 收入绿），后续新样式统一引用这里 */
+:root {
+  --expense-red: #cf1322;
+  --income-green: #389e0d;
+}
+
 .snake-page {
   display: flex;
   flex-direction: column;
@@ -189,7 +195,7 @@ body {
 .snake-score-value {
   font-size: 24px;
   font-weight: 700;
-  color: #389e0d;
+  color: var(--income-green);
 }
 
 .snake-board-wrap {
