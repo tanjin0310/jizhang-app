@@ -118,3 +118,11 @@
 - **Windows 打包坑（重要）**：electron-builder 解压 winCodeSign 工具时会在 darwin 符号链接上失败（Windows 无管理员权限无法创建符号链接，报 `Cannot create symbolic link`）。已解决：手动把解压产物复制到 `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0`（缺的 2 个 darwin 文件不影响 Windows 打包）。以后重新打包若换新版本 winCodeSign 需重做此步骤。构建命令建议带国内镜像：`ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ CSC_IDENTITY_AUTO_DISCOVERY=false npm run build:win`。
 - **数据目录已固定**：main 进程中 `app.setPath('userData', join(app.getPath('appData'), 'jizhang'))`，保证开发版与安装版共用同一账本 `%APPDATA%\jizhang\jizhang.db`（与第 5 节约定一致）。
 - 应用图标由 `scripts/make-icon.js` 纯 Node 生成（build/icon.png，512x512 品牌红 ¥），修改图标后重跑该脚本即可（本机 PowerShell 会卡死，勿用）。
+
+## 10. Git 存档约定（2026-08-15 用户确认）
+
+- 项目已纳入 git 管理：**本地仓库**（无云端备份，用户选择方案 A「仅本地存档」，云备份以后需要时再加）。
+- 日常工作流：**每完成一项功能改动，自动创建存档（commit）**，存档备注用中文简述本次改动；用户说「存档」时立即存档。
+- 用户不懂 git：任何 git 操作执行前，先用通俗语言讲解要做什么、有何影响，征得用户同意后再执行；不执行会改变历史的操作（如 rebase、reset 硬回退）除非用户明确要求。
+- 排除清单（.gitignore）：node_modules、out、dist、日志不进存档；账本数据在项目文件夹之外，与 git 无关，隐私安全。
+- 仓库本机身份：用户名 jizhang、邮箱 jizhang@local（仅本地标识，不对外）。
