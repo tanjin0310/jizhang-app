@@ -1,0 +1,152 @@
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100vh;
+}
+
+/* 支出金额：红色显示（国内记账习惯） */
+.amount {
+  color: #cf1322;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.logo {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #cf1322;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 流水分组头：日期 + 笔数 + 当日小计 */
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 4px 8px;
+  color: #8c8c8c;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.group-header:first-of-type {
+  padding-top: 4px;
+}
+
+/* 流水中一行记录 */
+.record-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.record-row:hover {
+  background: #fafafa;
+}
+
+.record-cat {
+  min-width: 180px;
+}
+
+.record-note {
+  flex: 1;
+  color: #8c8c8c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-row .amount {
+  min-width: 100px;
+  text-align: right;
+}
+
+/* 首页概览卡片 */
+.stat-label {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* 首页最近流水行 */
+.home-record-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.home-record-row:last-child {
+  border-bottom: none;
+}
+
+.home-record-row .amount {
+  min-width: 100px;
+  text-align: right;
+}
+
+/* 统计页分类排行 */
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.rank-row:last-child {
+  border-bottom: none;
+}
+
+.rank-no {
+  width: 24px;
+  text-align: center;
+  color: #8c8c8c;
+  font-weight: 600;
+}
+
+.rank-name {
+  min-width: 130px;
+}
+
+.rank-track {
+  flex: 1;
+  height: 10px;
+  background: #f0f0f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.rank-bar {
+  height: 100%;
+  border-radius: 5px;
+}
+
+.rank-pct {
+  width: 60px;
+  text-align: right;
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.rank-row .amount {
+  min-width: 100px;
+  text-align: right;
+}

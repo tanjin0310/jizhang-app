@@ -1,0 +1,71 @@
+{
+  "name": "jizhang",
+  "version": "0.1.0",
+  "description": "记账 - 个人桌面记账应用",
+  "main": "./out/main/index.js",
+  "author": "jizhang",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json --composite false && tsc --noEmit -p tsconfig.web.json --composite false",
+    "start": "electron-vite preview",
+    "postinstall": "electron-builder install-app-deps",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:mac": "electron-vite build && electron-builder --mac"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0"
+  },
+  "devDependencies": {
+    "@ant-design/icons": "^5.5.0",
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "antd": "^5.22.0",
+    "dayjs": "^1.11.13",
+    "echarts": "^6.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "build": {
+    "appId": "com.jizhang.app",
+    "productName": "记账",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "!**/.vscode/*",
+      "!src/*",
+      "!build/*",
+      "!scripts/*",
+      "!electron.vite.config.{js,ts,mjs,cjs}",
+      "!{.gitignore,README.md}",
+      "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.finance"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": ["zh_CN"],
+      "displayLanguageSelector": false,
+      "shortcutName": "记账",
+      "uninstallDisplayName": "记账"
+    }
+  }
+}
