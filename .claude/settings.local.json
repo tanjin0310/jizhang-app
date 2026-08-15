@@ -18,7 +18,12 @@
       "Bash(git init *)",
       "Bash(git config *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ls -la \"C:/Users/tanjin/.claude/CLAUDE.md\" 2>/dev/null && echo \"---存在---\" || echo \"---不存在---\")",
+      "Read(//c/Users/tanjin/.claude/**)",
+      "Bash(ELECTRON_RUN_AS_NODE=1 ./node_modules/.bin/electron \"C:/Users/tanjin/AppData/Local/Temp/check-db.js\")",
+      "Bash(ELECTRON_RUN_AS_NODE=1 ./node_modules/.bin/electron \"C:/Users/tanjin/AppData/Local/Temp/check-bak.js\")",
+      "Bash(git commit -m '新增收入功能：收入分类体系、结余统计、统计页收支切换 *)"
     ]
   }
 }

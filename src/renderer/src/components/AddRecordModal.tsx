@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Button, Cascader, DatePicker, Form, Input, InputNumber, Modal, message } from 'antd'
+import { Button, Cascader, DatePicker, Form, Input, InputNumber, Modal, Segmented, message } from 'antd'
 import dayjs from 'dayjs'
 import { api } from '../api'
-import type { Category, RecordItem } from '../../../shared/types'
+import type { Category, RecordItem, RecordType } from '../../../shared/types'
 import { errMsg } from '../utils'
 
 interface Props {
@@ -41,8 +41,13 @@ interface FormValues {
 
 export default function AddRecordModal({ open, onClose, onSaved, record }: Props): JSX.Element {
   const [form] = Form.useForm()
-  const [categories, setCategories] = useState<CascaderOption[]>([])
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  // 当前收支类型（连续记账时保持不动，方便连记多笔收入）
+  const [type, setType] = useState<RecordType>('expense')
   const [saving, setSaving] = useState(false)
+
+  // 当前收支类型下的分类树
+  const categories = buildCategoryTree(allCategories.filter((c) => c.type === type))
 
   // 打开弹窗时：加载分类，并根据「新增/编辑」模式初始化表单
   useEffect(() => {
@@ -50,9 +55,10 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
     api
       .listCategories()
       .then((data) => {
-        setCategories(buildCategoryTree(data))
+        setAllCategories(data)
         if (record) {
-          // 编辑模式：回填原记录内容
+          // 编辑模式：回填原记录内容（含收支类型）
+          setType(record.type)
           const cat = data.find((c) => c.id === record.categoryId)
           form.setFieldsValue({
             amount: record.amountCents / 100,
@@ -61,7 +67,8 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
             note: record.note || undefined
           })
         } else {
-          // 新增模式：清空表单，日期默认今天
+          // 新增模式：默认支出，清空表单，日期默认今天
+          setType('expense')
           form.setFieldsValue({ amount: undefined, categoryId: undefined, note: undefined, date: dayjs() })
         }
       })
@@ -71,6 +78,12 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
       })
   }, [open, record, form])
 
+  // 切换收支类型时清空已选分类，避免选到另一类型的分类
+  const handleTypeChange = (value: string | number): void => {
+    setType(value as RecordType)
+    form.setFieldsValue({ categoryId: undefined })
+  }
+
   const handleFinish = async (values: FormValues): Promise<void> => {
     setSaving(true)
     try {
@@ -79,7 +92,8 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
         amountCents: Math.round(values.amount * 100),
         categoryId: values.categoryId[values.categoryId.length - 1],
         date: values.date.format('YYYY-MM-DD'),
-        note: values.note ?? ''
+        note: values.note ?? '',
+        type
       }
       if (record) {
         await api.updateRecord(record.id, data)
@@ -89,7 +103,7 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
       } else {
         await api.addRecord(data)
         message.success('已保存 ✅')
-        // 保留分类和日期，清空金额与备注，方便连续记账
+        // 保留类型、分类和日期，清空金额与备注，方便连续记账
         form.setFieldsValue({ amount: undefined, note: undefined })
         onSaved()
       }
@@ -103,6 +117,17 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
   return (
     <Modal title={record ? '编辑记录' : '记一笔'} open={open} onCancel={onClose} footer={null} width={420}>
       <Form form={form} layout="vertical" onFinish={handleFinish} requiredMark={false}>
+        <Form.Item label="类型">
+          <Segmented
+            block
+            value={type}
+            onChange={handleTypeChange}
+            options={[
+              { label: '支出', value: 'expense' },
+              { label: '收入', value: 'income' }
+            ]}
+          />
+        </Form.Item>
         <Form.Item
           label="金额（元）"
           name="amount"
@@ -115,6 +140,7 @@ export default function AddRecordModal({ open, onClose, onSaved, record }: Props
             precision={2}
             placeholder="0.00"
             style={{ width: '100%' }}
+            className={type === 'income' ? 'amount-income-input' : ''}
             autoFocus
           />
         </Form.Item>

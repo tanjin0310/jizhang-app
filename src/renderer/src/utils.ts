@@ -1,8 +1,10 @@
 import dayjs from 'dayjs'
+import type { RecordType } from '../../shared/types'
 
-/** 金额（分）格式化为 ¥ 元，两位小数 */
-export function formatAmount(cents: number): string {
-  return '¥' + (cents / 100).toFixed(2)
+/** 金额（分）格式化为 ¥ 元，两位小数；收入带 + 号；负数显示 -¥（结余为负时用到） */
+export function formatAmount(cents: number, type: RecordType = 'expense'): string {
+  if (cents < 0) return '-¥' + (Math.abs(cents) / 100).toFixed(2)
+  return (type === 'income' ? '+¥' : '¥') + (cents / 100).toFixed(2)
 }
 
 /** 日期分组标题：今天 / 昨天 / M月D日（跨年时带年份） */

@@ -1,9 +1,10 @@
 import { app } from 'electron'
 import { join } from 'path'
+import fs from 'fs'
 import Database from 'better-sqlite3'
-import type { Category, NewRecord, RecordItem } from '../shared/types'
+import type { Category, NewRecord, RecordItem, RecordType } from '../shared/types'
 
-// 内置分类体系（与 CLAUDE.md 第 4 节一致）
+// 内置支出分类体系（与 CLAUDE.md 第 4 节一致）
 const BUILTIN_CATEGORIES: { icon: string; name: string; children: string[] }[] = [
   { icon: '🍜', name: '餐饮', children: ['早餐', '午餐', '晚餐', '零食', '饮料咖啡', '外卖', '聚餐'] },
   { icon: '🚗', name: '交通', children: ['公交地铁', '打车', '火车高铁', '飞机', '加油', '停车费'] },
@@ -15,6 +16,15 @@ const BUILTIN_CATEGORIES: { icon: string; name: string; children: string[] }[] =
   { icon: '🧧', name: '人情往来', children: ['红包礼金', '礼物赠送', '请客'] },
   { icon: '📱', name: '通讯', children: ['手机话费', '网络流量'] },
   { icon: '📦', name: '其他', children: ['其他支出'] }
+]
+
+// 内置收入分类体系（与 CLAUDE.md 第 4 节一致）
+const BUILTIN_INCOME_CATEGORIES: { icon: string; name: string; children: string[] }[] = [
+  { icon: '💰', name: '工资薪酬', children: ['月薪工资', '奖金提成', '加班补贴'] },
+  { icon: '📈', name: '投资理财', children: ['利息收益', '股票基金', '房租收入'] },
+  { icon: '🧧', name: '红包礼金', children: ['红包收入', '礼金收入'] },
+  { icon: '💼', name: '兼职外快', children: ['兼职收入', '稿费', '副业收入'] },
+  { icon: '📦', name: '其他收入', children: ['其他收入'] }
 ]
 
 let db: Database.Database
@@ -33,7 +43,8 @@ export function initDatabase(): void {
       name TEXT NOT NULL,
       icon TEXT NOT NULL DEFAULT '',
       is_builtin INTEGER NOT NULL DEFAULT 0,
-      sort_order INTEGER NOT NULL DEFAULT 0
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      type TEXT NOT NULL DEFAULT 'expense'
     );
     CREATE TABLE IF NOT EXISTS records (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,28 +52,61 @@ export function initDatabase(): void {
       amount_cents INTEGER NOT NULL,
       date TEXT NOT NULL,
       note TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL DEFAULT 'expense',
       created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
     CREATE INDEX IF NOT EXISTS idx_records_date ON records(date);
   `)
 
+  migrateDatabase()
   seedCategories()
 }
 
-/** 首次运行时写入内置分类体系 */
+/** 老库升级：补收支类型列。只加列不删数据；迁移前自动把数据库备份为 jizhang.db.bak */
+function migrateDatabase(): void {
+  const recordCols = db.pragma('table_info(records)') as { name: string }[]
+  const catCols = db.pragma('table_info(categories)') as { name: string }[]
+  const need =
+    !recordCols.some((c) => c.name === 'type') || !catCols.some((c) => c.name === 'type')
+  if (!need) return
+
+  // 先把数据落盘（WAL 模式下最新数据可能在 -wal 文件里），再复制备份
+  db.pragma('wal_checkpoint(TRUNCATE)')
+  const dbPath = join(app.getPath('userData'), 'jizhang.db')
+  if (fs.existsSync(dbPath)) fs.copyFileSync(dbPath, dbPath + '.bak')
+
+  if (!recordCols.some((c) => c.name === 'type')) {
+    db.exec("ALTER TABLE records ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'")
+  }
+  if (!catCols.some((c) => c.name === 'type')) {
+    db.exec("ALTER TABLE categories ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'")
+  }
+}
+
+/** 按类型补种内置分类（各类型独立判断：新库全种，老库升级时只补收入分类） */
 function seedCategories(): void {
-  const { c } = db.prepare('SELECT COUNT(*) AS c FROM categories').get() as { c: number }
+  seedCategorySet(BUILTIN_CATEGORIES, 'expense')
+  seedCategorySet(BUILTIN_INCOME_CATEGORIES, 'income')
+}
+
+function seedCategorySet(
+  cats: { icon: string; name: string; children: string[] }[],
+  type: RecordType
+): void {
+  const { c } = db.prepare('SELECT COUNT(*) AS c FROM categories WHERE type = ?').get(type) as {
+    c: number
+  }
   if (c > 0) return
 
   const insert = db.prepare(
-    'INSERT INTO categories (parent_id, name, icon, is_builtin, sort_order) VALUES (?, ?, ?, 1, ?)'
+    'INSERT INTO categories (parent_id, name, icon, is_builtin, sort_order, type) VALUES (?, ?, ?, 1, ?, ?)'
   )
   const tx = db.transaction(() => {
-    BUILTIN_CATEGORIES.forEach((cat, i) => {
-      const parentId = insert.run(null, cat.name, cat.icon, i).lastInsertRowid
+    cats.forEach((cat, i) => {
+      const parentId = insert.run(null, cat.name, cat.icon, i, type).lastInsertRowid
       cat.children.forEach((child, j) => {
-        insert.run(parentId, child, '', i * 100 + j)
+        insert.run(parentId, child, '', i * 100 + j, type)
       })
     })
   })
@@ -73,7 +117,7 @@ function seedCategories(): void {
 export function listCategories(): Category[] {
   return db
     .prepare(
-      'SELECT id, parent_id AS parentId, name, icon, is_builtin AS isBuiltin, sort_order AS sortOrder FROM categories ORDER BY sort_order'
+      'SELECT id, parent_id AS parentId, name, icon, is_builtin AS isBuiltin, sort_order AS sortOrder, type FROM categories ORDER BY sort_order'
     )
     .all() as Category[]
 }
@@ -83,14 +127,18 @@ export function addRecord(data: NewRecord): number {
   if (!Number.isInteger(data.amountCents) || data.amountCents <= 0) {
     throw new Error('金额不合法')
   }
-  const { c } = db.prepare('SELECT COUNT(*) AS c FROM categories WHERE id = ?').get(data.categoryId) as {
-    c: number
+  if (data.type !== 'expense' && data.type !== 'income') {
+    throw new Error('记录类型不合法')
   }
-  if (c === 0) throw new Error('分类不存在')
+  const cat = db.prepare('SELECT type FROM categories WHERE id = ?').get(data.categoryId) as
+    | { type: RecordType }
+    | undefined
+  if (!cat) throw new Error('分类不存在')
+  if (cat.type !== data.type) throw new Error('分类与收支类型不匹配')
 
   const result = db
-    .prepare('INSERT INTO records (category_id, amount_cents, date, note) VALUES (?, ?, ?, ?)')
-    .run(data.categoryId, data.amountCents, data.date, data.note.trim())
+    .prepare('INSERT INTO records (category_id, amount_cents, date, note, type) VALUES (?, ?, ?, ?, ?)')
+    .run(data.categoryId, data.amountCents, data.date, data.note.trim(), data.type)
   return Number(result.lastInsertRowid)
 }
 
@@ -98,7 +146,7 @@ export function addRecord(data: NewRecord): number {
 export function listRecords(filter: { month?: string } = {}): RecordItem[] {
   let sql = `
     SELECT r.id, r.category_id AS categoryId, p.id AS parentId,
-           r.amount_cents AS amountCents, r.date, r.note,
+           r.amount_cents AS amountCents, r.date, r.note, r.type,
            r.created_at AS createdAt, r.updated_at AS updatedAt,
            c.name AS categoryName, c.icon AS icon,
            p.name AS parentName, p.icon AS parentIcon
@@ -136,7 +184,26 @@ export function updateRecord(id: number, data: Partial<NewRecord>): void {
     fields.push('note = ?')
     params.push(data.note.trim())
   }
+  if (data.type !== undefined) {
+    if (data.type !== 'expense' && data.type !== 'income') throw new Error('记录类型不合法')
+    fields.push('type = ?')
+    params.push(data.type)
+  }
   if (fields.length === 0) return
+
+  // 类型或分类变化时，校验收支类型与分类匹配（防止支出分类挂在收入记录上）
+  if (data.type !== undefined || data.categoryId !== undefined) {
+    const cur = db
+      .prepare('SELECT category_id AS categoryId, type FROM records WHERE id = ?')
+      .get(id) as { categoryId: number; type: RecordType } | undefined
+    if (!cur) return
+    const cat = db
+      .prepare('SELECT type FROM categories WHERE id = ?')
+      .get(data.categoryId ?? cur.categoryId) as { type: RecordType } | undefined
+    if (!cat) throw new Error('分类不存在')
+    if (cat.type !== (data.type ?? cur.type)) throw new Error('分类与收支类型不匹配')
+  }
+
   fields.push("updated_at = datetime('now', 'localtime')")
   params.push(id)
   db.prepare(`UPDATE records SET ${fields.join(', ')} WHERE id = ?`).run(...params)
@@ -149,9 +216,10 @@ export function deleteRecord(id: number): void {
 
 /** 添加自定义二级小类，返回新分类 id */
 export function addCategory(parentId: number, name: string): number {
+  // 新小类自动继承父级大类的收支类型
   const parent = db
-    .prepare('SELECT id FROM categories WHERE id = ? AND parent_id IS NULL')
-    .get(parentId) as { id: number } | undefined
+    .prepare('SELECT id, type FROM categories WHERE id = ? AND parent_id IS NULL')
+    .get(parentId) as { id: number; type: RecordType } | undefined
   if (!parent) throw new Error('一级大类不存在')
 
   const trimmed = name.trim()
@@ -168,8 +236,10 @@ export function addCategory(parentId: number, name: string): number {
     .get(parentId) as { m: number | null }
 
   const result = db
-    .prepare('INSERT INTO categories (parent_id, name, icon, is_builtin, sort_order) VALUES (?, ?, ?, 0, ?)')
-    .run(parentId, trimmed, '', (m ?? 0) + 1)
+    .prepare(
+      'INSERT INTO categories (parent_id, name, icon, is_builtin, sort_order, type) VALUES (?, ?, ?, 0, ?, ?)'
+    )
+    .run(parentId, trimmed, '', (m ?? 0) + 1, parent.type)
   return Number(result.lastInsertRowid)
 }
 

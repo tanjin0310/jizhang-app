@@ -15,7 +15,8 @@ interface DateGroup {
   date: string
   label: string
   items: RecordItem[]
-  total: number
+  expenseTotal: number
+  incomeTotal: number
 }
 
 export default function TransactionsPage({ refreshKey, onEdit, onChanged }: Props): JSX.Element {
@@ -60,12 +61,15 @@ export default function TransactionsPage({ refreshKey, onEdit, onChanged }: Prop
       arr.push(r)
       map.set(r.date, arr)
     }
-    return Array.from(map.entries()).map(([date, items]) => ({
-      date,
-      label: dayLabel(date),
-      items,
-      total: items.reduce((sum, r) => sum + r.amountCents, 0)
-    }))
+    return Array.from(map.entries()).map(([date, items]) => {
+      let expenseTotal = 0
+      let incomeTotal = 0
+      for (const r of items) {
+        if (r.type === 'income') incomeTotal += r.amountCents
+        else expenseTotal += r.amountCents
+      }
+      return { date, label: dayLabel(date), items, expenseTotal, incomeTotal }
+    })
   }, [filtered])
 
   const handleDelete = async (id: number): Promise<void> => {
@@ -116,12 +120,23 @@ export default function TransactionsPage({ refreshKey, onEdit, onChanged }: Prop
       ) : (
         groups.map((g) => (
           <div key={g.date}>
-            {/* 分组头：日期 + 笔数 + 当日小计 */}
+            {/* 分组头：日期 + 笔数 + 当日小计（收支分开展示，为 0 的不显示） */}
             <div className="group-header">
               <span>
                 {g.label} · 共 {g.items.length} 笔
               </span>
-              <span>¥{(g.total / 100).toFixed(2)}</span>
+              <span style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                {g.expenseTotal > 0 && (
+                  <span>
+                    支出 <span className="amount">{formatAmount(g.expenseTotal)}</span>
+                  </span>
+                )}
+                {g.incomeTotal > 0 && (
+                  <span>
+                    收入 <span className="amount income">{formatAmount(g.incomeTotal, 'income')}</span>
+                  </span>
+                )}
+              </span>
             </div>
             {g.items.map((r) => (
               <div key={r.id} className="record-row">
@@ -129,7 +144,9 @@ export default function TransactionsPage({ refreshKey, onEdit, onChanged }: Prop
                   {r.parentIcon} {r.parentName} / {r.categoryName}
                 </span>
                 <span className="record-note">{r.note}</span>
-                <span className="amount">{formatAmount(r.amountCents)}</span>
+                <span className={r.type === 'income' ? 'amount income' : 'amount'}>
+                  {formatAmount(r.amountCents, r.type)}
+                </span>
                 <Button
                   size="small"
                   type="text"

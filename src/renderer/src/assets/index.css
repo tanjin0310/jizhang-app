@@ -16,6 +16,27 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* 收入金额：绿色显示（+ 号由 formatAmount 生成） */
+.amount.income {
+  color: #389e0d;
+}
+
+/* 记一笔弹窗中收入类型的金额输入文字变绿 */
+.amount-income-input input {
+  color: #389e0d;
+}
+
+/* 首页「今日收支」卡片里的两行明细 */
+.today-breakdown {
+  margin-top: 4px;
+}
+
+.today-line {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
 .logo {
   height: 56px;
   display: flex;

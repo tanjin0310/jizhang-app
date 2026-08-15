@@ -33,16 +33,34 @@ export default function HomePage({ refreshKey }: Props): JSX.Element {
     [records, monthKey]
   )
 
-  const totalCents = monthRecords.reduce((sum, r) => sum + r.amountCents, 0)
+  // 本月收支分类型统计
+  const monthExpenseCents = monthRecords
+    .filter((r) => r.type !== 'income')
+    .reduce((sum, r) => sum + r.amountCents, 0)
+  const monthIncomeCents = monthRecords
+    .filter((r) => r.type === 'income')
+    .reduce((sum, r) => sum + r.amountCents, 0)
+  // 结余 = 收入 − 支出（负数表示本月超支）
+  const balanceCents = monthIncomeCents - monthExpenseCents
   const count = monthRecords.length
   const isCurrentMonth = monthKey === dayjs().format('YYYY-MM')
-  // 日均 = 本月支出 ÷ 本月已过天数（查看历史月份时按当月总天数）
+  // 日均支出 = 本月支出 ÷ 本月已过天数（查看历史月份时按当月总天数）
   const daysPassed = isCurrentMonth ? dayjs().date() : month.daysInMonth()
-  const dailyAvgCents = daysPassed > 0 ? totalCents / daysPassed : 0
+  const dailyAvgCents = daysPassed > 0 ? monthExpenseCents / daysPassed : 0
 
   const todayKey = dayjs().format('YYYY-MM-DD')
-  const todayCents = useMemo(
-    () => records.filter((r) => r.date === todayKey).reduce((sum, r) => sum + r.amountCents, 0),
+  const todayExpenseCents = useMemo(
+    () =>
+      records
+        .filter((r) => r.date === todayKey && r.type !== 'income')
+        .reduce((sum, r) => sum + r.amountCents, 0),
+    [records, todayKey]
+  )
+  const todayIncomeCents = useMemo(
+    () =>
+      records
+        .filter((r) => r.date === todayKey && r.type === 'income')
+        .reduce((sum, r) => sum + r.amountCents, 0),
     [records, todayKey]
   )
 
@@ -65,36 +83,53 @@ export default function HomePage({ refreshKey }: Props): JSX.Element {
         )}
       </div>
 
-      {/* 概览卡片 */}
+      {/* 概览卡片：支出 / 收入 / 结余 / 今日收支 */}
       <Row gutter={16}>
         <Col span={6}>
           <Card>
             <div className="stat-label">本月支出</div>
-            <div className="stat-value amount">{formatAmount(totalCents)}</div>
+            <div className="stat-value amount">{formatAmount(monthExpenseCents)}</div>
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <div className="stat-label">本月日均</div>
-            <div className="stat-value amount">{formatAmount(Math.round(dailyAvgCents))}</div>
+            <div className="stat-label">本月收入</div>
+            <div className="stat-value amount income">{formatAmount(monthIncomeCents, 'income')}</div>
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <div className="stat-label">本月笔数</div>
-            <div className="stat-value">{count} 笔</div>
+            <div className="stat-label">本月结余</div>
+            <div className={balanceCents >= 0 ? 'stat-value amount income' : 'stat-value amount'}>
+              {formatAmount(balanceCents, balanceCents >= 0 ? 'income' : 'expense')}
+            </div>
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <div className="stat-label">今日支出</div>
-            <div className="stat-value amount">{formatAmount(todayCents)}</div>
+            <div className="stat-label">今日收支</div>
+            <div className="today-breakdown">
+              <div className="today-line">
+                支出 <span className="amount">{formatAmount(todayExpenseCents)}</span>
+              </div>
+              <div className="today-line">
+                收入 <span className="amount income">{formatAmount(todayIncomeCents, 'income')}</span>
+              </div>
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* 最近流水 */}
-      <Card title={`${month.format('M月')}最近流水`} style={{ marginTop: 16 }}>
+      {/* 最近流水（标题右侧附笔数与日均支出） */}
+      <Card
+        title={`${month.format('M月')}最近流水`}
+        extra={
+          <span style={{ color: '#8c8c8c', fontSize: 13 }}>
+            共 {count} 笔 · 日均支出 {formatAmount(Math.round(dailyAvgCents))}
+          </span>
+        }
+        style={{ marginTop: 16 }}
+      >
         {recent.length === 0 ? (
           <Empty description="本月还没有记录，点击右上角「记一笔」开始吧" />
         ) : (
@@ -105,7 +140,9 @@ export default function HomePage({ refreshKey }: Props): JSX.Element {
               </span>
               <span className="record-note">{r.note}</span>
               <span style={{ color: '#999', fontSize: 13 }}>{dayjs(r.date).format('M月D日')}</span>
-              <span className="amount">{formatAmount(r.amountCents)}</span>
+              <span className={r.type === 'income' ? 'amount income' : 'amount'}>
+                {formatAmount(r.amountCents, r.type)}
+              </span>
             </div>
           ))
         )}

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Input, Modal, Popconfirm, Tag, message } from 'antd'
+import { Button, Card, Input, Modal, Popconfirm, Tabs, Tag, message } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { api } from '../api'
-import type { Category } from '../../../shared/types'
+import type { Category, RecordType } from '../../../shared/types'
 import { errMsg } from '../utils'
 
 export default function SettingsPage(): JSX.Element {
   const [categories, setCategories] = useState<Category[]>([])
+  // 当前查看的分类类型（支出 / 收入）
+  const [tab, setTab] = useState<RecordType>('expense')
   // 正在为其添加小类的一级大类；null 表示弹窗关闭
   const [addParent, setAddParent] = useState<Category | null>(null)
   const [newName, setNewName] = useState('')
@@ -23,7 +25,7 @@ export default function SettingsPage(): JSX.Element {
     load()
   }, [load])
 
-  const parents = categories.filter((c) => c.parentId === null)
+  const parents = categories.filter((c) => c.parentId === null && c.type === tab)
 
   const handleAdd = async (): Promise<void> => {
     if (!addParent || !newName.trim()) return
@@ -54,9 +56,17 @@ export default function SettingsPage(): JSX.Element {
   return (
     <div>
       <Card title="分类管理">
+        <Tabs
+          activeKey={tab}
+          onChange={(k) => setTab(k as RecordType)}
+          items={[
+            { key: 'expense', label: '支出分类' },
+            { key: 'income', label: '收入分类' }
+          ]}
+        />
         <p style={{ color: '#8c8c8c', marginTop: 0 }}>
-          一级大类固定 10 个不可修改；您可以为每个大类添加自定义二级小类。
-          内置小类与已被使用的小类不可删除（保护历史数据）。
+          {tab === 'expense' ? '支出一级大类固定 10 个' : '收入一级大类固定 5 个'}不可修改；
+          您可以为每个大类添加自定义二级小类。内置小类与已被使用的小类不可删除（保护历史数据）。
         </p>
         {parents.map((p) => {
           const children = categories.filter((c) => c.parentId === p.id)

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Card, Col, Empty, Row } from 'antd'
+import { Button, Card, Col, Empty, Row, Segmented } from 'antd'
 import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import type { EChartsCoreOption } from 'echarts/core'
 import { api } from '../api'
-import type { Category, RecordItem } from '../../../shared/types'
+import type { Category, RecordItem, RecordType } from '../../../shared/types'
 import { formatAmount } from '../utils'
 import Chart from '../components/Chart'
 
@@ -12,8 +12,9 @@ import Chart from '../components/Chart'
 const PIE_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
 // 第 9 个起的一级大类并入「其他」切片，用中性灰
 const OTHER_COLOR = '#b0afa9'
-// 每日支出柱状图：品牌红（支出金额色）
+// 柱状图颜色：支出品牌红、收入深绿（收支图表不同时出现）
 const BAR_COLOR = '#cf1322'
+const BAR_COLOR_INCOME = '#389e0d'
 const INK_SECONDARY = '#52514e'
 const INK_MUTED = '#898781'
 const CHART_FONT = '-apple-system, "Segoe UI", "Microsoft YaHei", sans-serif'
@@ -33,6 +34,8 @@ interface ParentStat {
 
 export default function StatsPage({ refreshKey }: Props): JSX.Element {
   const [month, setMonth] = useState(dayjs())
+  // 当前统计的收支类型
+  const [type, setType] = useState<RecordType>('expense')
   const [records, setRecords] = useState<RecordItem[]>([])
   const [parents, setParents] = useState<Category[]>([])
 
@@ -42,18 +45,18 @@ export default function StatsPage({ refreshKey }: Props): JSX.Element {
       .then(([recordData, categoryData]) => {
         if (cancelled) return
         setRecords(recordData)
-        setParents(categoryData.filter((c) => c.parentId === null))
+        setParents(categoryData.filter((c) => c.parentId === null && c.type === type))
       })
       .catch((error) => console.error('读取统计数据失败', error))
     return () => {
       cancelled = true
     }
-  }, [refreshKey])
+  }, [refreshKey, type])
 
   const monthKey = month.format('YYYY-MM')
   const monthRecords = useMemo(
-    () => records.filter((r) => r.date.startsWith(monthKey)),
-    [records, monthKey]
+    () => records.filter((r) => r.date.startsWith(monthKey) && r.type === type),
+    [records, monthKey, type]
   )
 
   // 一级分类汇总：色板按内置分类顺序固定分配（第 9 个起 slot=-1 并入「其他」）
@@ -166,33 +169,46 @@ export default function StatsPage({ refreshKey }: Props): JSX.Element {
           type: 'bar',
           data: values,
           barMaxWidth: 22,
-          itemStyle: { color: BAR_COLOR, borderRadius: [4, 4, 0, 0] }
+          itemStyle: { color: type === 'income' ? BAR_COLOR_INCOME : BAR_COLOR, borderRadius: [4, 4, 0, 0] }
         }
       ]
     }
-  }, [monthRecords, month])
+  }, [monthRecords, month, type])
 
   const isCurrentMonth = monthKey === dayjs().format('YYYY-MM')
 
   return (
     <div>
-      {/* 月份切换 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => setMonth((m) => m.subtract(1, 'month'))} />
-        <span style={{ fontSize: 18, fontWeight: 600, minWidth: 130, textAlign: 'center' }}>
-          {month.format('YYYY年M月')}
-        </span>
-        <Button icon={<ArrowRightOutlined />} onClick={() => setMonth((m) => m.add(1, 'month'))} />
-        {!isCurrentMonth && (
-          <Button type="link" onClick={() => setMonth(dayjs())}>
-            回到本月
-          </Button>
-        )}
+      {/* 收支切换 + 月份切换 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+        <Segmented
+          value={type}
+          onChange={(v) => setType(v as RecordType)}
+          options={[
+            { label: '支出', value: 'expense' },
+            { label: '收入', value: 'income' }
+          ]}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => setMonth((m) => m.subtract(1, 'month'))} />
+          <span style={{ fontSize: 18, fontWeight: 600, minWidth: 130, textAlign: 'center' }}>
+            {month.format('YYYY年M月')}
+          </span>
+          <Button icon={<ArrowRightOutlined />} onClick={() => setMonth((m) => m.add(1, 'month'))} />
+          {!isCurrentMonth && (
+            <Button type="link" onClick={() => setMonth(dayjs())}>
+              回到本月
+            </Button>
+          )}
+        </div>
       </div>
 
       {monthRecords.length === 0 ? (
         <Card>
-          <Empty description="本月还没有记录" style={{ padding: '48px 0' }} />
+          <Empty
+            description={`本月还没有${type === 'income' ? '收入' : '支出'}记录`}
+            style={{ padding: '48px 0' }}
+          />
         </Card>
       ) : (
         <>
@@ -203,7 +219,7 @@ export default function StatsPage({ refreshKey }: Props): JSX.Element {
               </Card>
             </Col>
             <Col span={12}>
-              <Card title="每日支出">
+              <Card title={type === 'income' ? '每日收入' : '每日支出'}>
                 <Chart option={barOption} height={340} />
               </Card>
             </Col>

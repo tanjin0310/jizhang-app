@@ -1,5 +1,8 @@
 // 主进程与界面层共用的数据类型定义
 
+/** 收支类型 */
+export type RecordType = 'expense' | 'income'
+
 /** 分类（一级大类或二级小类，parentId 为 null 表示一级大类） */
 export interface Category {
   id: number
@@ -8,6 +11,7 @@ export interface Category {
   icon: string
   isBuiltin: number
   sortOrder: number
+  type: RecordType
 }
 
 /** 一笔记账记录（返回给界面时已附带分类名称信息） */
@@ -18,6 +22,7 @@ export interface RecordItem {
   amountCents: number
   date: string
   note: string
+  type: RecordType
   createdAt: string
   updatedAt: string
   categoryName: string
@@ -32,6 +37,7 @@ export interface NewRecord {
   amountCents: number
   date: string
   note: string
+  type: RecordType
 }
 
 /** 界面通过 window.api 可调用的全部功能 */
