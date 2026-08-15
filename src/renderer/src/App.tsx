@@ -5,6 +5,7 @@ import TransactionsPage from './pages/Transactions'
 import HomePage from './pages/Home'
 import StatsPage from './pages/Stats'
 import SettingsPage from './pages/Settings'
+import SnakeGamePage from './pages/SnakeGame'
 import AddRecordModal from './components/AddRecordModal'
 import type { RecordItem } from '../../shared/types'
 
@@ -14,6 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
   home: '首页',
   transactions: '流水',
   stats: '统计',
+  game: '游戏',
   settings: '设置'
 }
 
@@ -69,6 +71,7 @@ export default function App(): JSX.Element {
             { key: 'home', label: '首页' },
             { key: 'transactions', label: '流水' },
             { key: 'stats', label: '统计' },
+            { key: 'game', label: '🎮 游戏' },
             { key: 'settings', label: '设置' }
           ]}
         />
@@ -95,6 +98,7 @@ export default function App(): JSX.Element {
             <TransactionsPage refreshKey={refreshKey} onEdit={openEditModal} onChanged={handleSaved} />
           )}
           {page === 'stats' && <StatsPage refreshKey={refreshKey} />}
+          {page === 'game' && <SnakeGamePage />}
           {page === 'settings' && <SettingsPage />}
         </Content>
       </Layout>
