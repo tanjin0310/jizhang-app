@@ -1,7 +1,7 @@
 {
   "name": "jizhang",
   "version": "0.1.0",
-  "description": "八八记账 - 个人桌面记账应用",
+  "description": "记账 - 个人桌面记账应用",
   "main": "./out/main/index.js",
   "author": "jizhang",
   "private": true,
@@ -39,7 +39,7 @@
   },
   "build": {
     "appId": "com.jizhang.app",
-    "productName": "八八记账",
+    "productName": "记账",
     "directories": {
       "buildResources": "build"
     },
@@ -64,8 +64,8 @@
       "allowToChangeInstallationDirectory": true,
       "installerLanguages": ["zh_CN"],
       "displayLanguageSelector": false,
-      "shortcutName": "八八记账",
-      "uninstallDisplayName": "八八记账"
+      "shortcutName": "记账",
+      "uninstallDisplayName": "记账"
     }
   }
 }
