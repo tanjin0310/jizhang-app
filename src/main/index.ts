@@ -12,7 +12,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    title: '记账',
+    title: '八八记账',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false

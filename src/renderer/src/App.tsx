@@ -60,7 +60,7 @@ export default function App(): JSX.Element {
   return (
     <Layout style={{ height: '100vh' }}>
       <Sider theme="light" width={180}>
-        <div className="logo">💰 记账</div>
+        <div className="logo">💰 八八记账</div>
         <Menu
           mode="inline"
           selectedKeys={[page]}
